@@ -48,12 +48,12 @@ message Session {
 }
 
 service ChunkIndexer {
-    rpc NewDataset(DatasetSpec) returns (NewDatasetResponse);
+    rpc NewDataset(NewDatasetRequest) returns (NewDatasetResponse);
 
-    // Create new session if one not present or previous one committed for user, or returns old uncommitted session.
+    // Create new session for user if one not present or previous one committed, or returns old uncommitted session.
     rpc OpenSession(SessionRequest) returns (SessionResponse); 
 
-    // Commits and closes the session
+    // Commits and closes the session.
     rpc CommitSession(CommitRequest) returns (CommitResponse); 
 
     rpc WriteChunks(WriteRequest) returns (WriteResponse);
@@ -63,7 +63,7 @@ service ChunkIndexer {
     rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
 }
 
-// ---- Request messages allow us to alter data requirements in backward compatible ways.
+// ---- Request message per rpc allows us to alter data requirements in backward compatible way.
 
 message NewDatasetRequest {
     DatasetSpec spec = 1;
@@ -96,7 +96,7 @@ message MarkIngestedRequest {
     ChunkCoords coords = 2;
 }
 
-// ---- Response messages allow us to alter data requirements in backward compatible ways.
+// ---- Response message per rpc allows us to alter data requirements in backward compatible way.
 
 message SessionResponse {
     Session session = 1;
