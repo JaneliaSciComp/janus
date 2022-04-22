@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package janus;
+
+option go_package = "github.com/JaneliaSciComp/janus";
+
+enum DataFormat {
+    N5 = 0; // Only one initially implemented.
+    ZARR = 1; 
+    NG_UNSHARDED = 2;
+    NG_SHARDED = 3;
+}
+
+message Dataset {
+    string path = 1;
+}
+
+message DatasetSpec {
+    Dataset dataset = 1;
+    DataFormat layout = 2;
+    uint32 numDims = 3;    // number of dimensions
+    repeated uint32 dimBits = 4; // number of bits to represent each dimension
+}
+
+message ChunkCoord {
+    repeated uint64 coord = 1;  // nD coordinate
+}
+
+message ChunkCoords {
+    repeated ChunkCoord coords = 1;
+}
+
+message Chunk {
+    ChunkCoord coord = 1;
+    bytes data = 2; // can only have length up to max uint32.
+}
+
+message Chunks {
+    repeated Chunk chunks = 1;
+}
+
+message Version {
+    uint64 id = 1;  // a unique monotically increasing ID per Dataset
+}
+
+message SessionInfo {
+    string client = 1;   // user (e.g., email), program name, etc.
+    Dataset dataset = 2;
+    Version parent = 3;  // version ID of the parent to desired session.
+}
+
+message Session {
+    Version version = 2;
+}
+
+service ChunkIndexer {
+    rpc NewDataset(DatasetSpec) returns (NewDatasetResponse);
+
+    // Create new session if one not present or previous one committed for user, or returns old uncommitted session.
+    rpc OpenSession(SessionRequest) returns (SessionResponse); 
+
+    // Commits and closes the session
+    rpc CommitSession(CommitRequest) returns (CommitResponse); 
+
+    rpc WriteChunks(WriteRequest) returns (WriteResponse);
+    rpc ReadChunks(ReadRequest) returns (ReadResponse);
+
+    // For advanced clients that write directly to backing store and only need index to be updated.
+    rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
+}
+
+// ---- Request messages allow us to alter data requirements in backward compatible ways.
+
+message NewDatasetRequest {
+    DatasetSpec spec = 1;
+}
+
+message SessionRequest {
+    SessionInfo info = 1;
+}
+
+message CommitRequest {
+    Session session = 1;
+    string message = 2;
+}
+
+message WriteRequest {
+    Session session = 1;
+    Chunks chunks = 2;
+}
+
+message ReadRequest {
+    Session session = 1;
+    repeated ChunkCoord coords = 2;
+}
+
+message MarkIngestedRequest {
+    Session session = 1;
+    ChunkCoords coords = 2;
+}
+
+// ---- Response messages allow us to alter data requirements in backward compatible ways.
+
+message SessionResponse {
+    Session session = 1;
+}
+
+message ReadResponse {
+    Chunks chunks = 1;
+}
+
+message NewDatasetResponse {}
+message CommitResponse {}
+message WriteResponse {}
+message MarkIngestedResponse {}
