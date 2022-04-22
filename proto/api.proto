@@ -43,12 +43,6 @@ message Version {
     uint64 id = 1;  // a unique monotically increasing ID per Dataset
 }
 
-message SessionInfo {
-    string client = 1;   // user (e.g., email), program name, etc.
-    Dataset dataset = 2;
-    Version parent = 3;  // version ID of the parent to desired session.
-}
-
 message Session {
     Version version = 2;
 }
@@ -76,7 +70,10 @@ message NewDatasetRequest {
 }
 
 message SessionRequest {
-    SessionInfo info = 1;
+    string client = 1;   // user (e.g., email), program name, etc.
+    Dataset dataset = 2;
+    Version parent = 3;  // version ID of the parent to desired session.
+    optional bool base = 4; // if true, previous data is discarded and we start with fresh nD volume.
 }
 
 message CommitRequest {
