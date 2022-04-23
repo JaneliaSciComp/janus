@@ -78,12 +78,12 @@ service ChunkIndexer {
     rpc ReadChunks(ReadRequest) returns (Chunks);
 
     // Read chunks from any given version.
-    rpc ReadCommittedChunks(ReadCommittedRequest) returns (Chunks);
+    rpc ReadVersionChunks(ReadVersionRequest) returns (Chunks);
 
     // ---- For advanced clients that read/write directly to backing store.
 
     // Get location of chunks, i.e., (version, chunk coord) tuples, for set of chunk coords at a given version.
-    rpc GetCommittedChunkRefs(ReadCommittedRequest) returns (ChunkRefs);
+    rpc GetVersionChunkRefs(ReadVersionRequest) returns (ChunkRefs);
 
     // Update the Janus server index for chunks that have been altered using direct writes to chunk storage.
     rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
@@ -117,7 +117,7 @@ message ReadRequest {
     repeated ChunkCoord coords = 2;
 }
 
-message ReadCommittedRequest {
+message ReadVersionRequest {
     Version version = 1;
     repeated ChunkCoord coords = 2;
 }
