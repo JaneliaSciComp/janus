@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package janus;
 
-option go_package = "github.com/JaneliaSciComp/janus";
+option go_package = "github.com/JaneliaSciComp/janus/proto";
 
 enum DataFormat {
     N5 = 0; // Only one initially implemented.
@@ -18,52 +18,78 @@ message Dataset {
 message DatasetSpec {
     Dataset dataset = 1;
     DataFormat layout = 2;
-    uint32 numDims = 3;    // number of dimensions
+    uint32 numDims = 3; // number of dimensions
     repeated uint32 dimBits = 4; // number of bits to represent each dimension
+    string metadata = 5; // DataFormat-specific metadata
 }
 
+// A Version is a unique monotically increasing ID per Dataset.
+// Its git equivalent is either a working directory OR a committed version.
+message Version {
+    uint64 id = 1; 
+}
+
+// A Session represents an uncommitted version where chunks can be written.
+// Its git equivalent would be a working directory.
+message Session {
+    Version version = 1;
+}
+
+// A nD coordinate for a chunk of data.
 message ChunkCoord {
-    repeated uint64 coord = 1;  // nD coordinate
+    repeated uint64 coord = 1;
 }
 
-message ChunkCoords {
-    repeated ChunkCoord coords = 1;
+// Chunk references give advanced clients location of last change for given chunks
+//  via (version, chunk coord) tuple.
+message ChunkRefs {
+    repeated uint64 versions = 1;
+    repeated ChunkCoord coords = 2;
 }
 
+// Note: If serialization/deserialization of large chunk data is too costly,
+//  we can bypass embedding in protobuf message and send directly afterwards.
+//  Can also test CapnProto since API is small and retooling not so costly
+//  after we determine our actual workflow requirements.
+//  This isn't a factor if the client writes/reads directly from the chunk
+//  storage using pure
 message Chunk {
     ChunkCoord coord = 1;
-    bytes data = 2; // can only have length up to max uint32.
+    bytes data = 2; // whole message must be less than 2GiB (protobuf limit)
 }
 
 message Chunks {
     repeated Chunk chunks = 1;
 }
 
-message Version {
-    uint64 id = 1;  // a unique monotically increasing ID per Dataset
-}
-
-message Session {
-    Version version = 2;
-}
-
 service ChunkIndexer {
     rpc NewDataset(NewDatasetRequest) returns (NewDatasetResponse);
 
     // Create new session for user if one not present or previous one committed, or returns old uncommitted session.
-    rpc OpenSession(SessionRequest) returns (SessionResponse); 
+    rpc OpenSession(SessionRequest) returns (Session); 
 
     // Commits and closes the session.
     rpc CommitSession(CommitRequest) returns (CommitResponse); 
 
+    // Write chunks in a session.
     rpc WriteChunks(WriteRequest) returns (WriteResponse);
-    rpc ReadChunks(ReadRequest) returns (ReadResponse);
 
-    // For advanced clients that write directly to backing store and only need index to be updated.
+    // Read chunks in a session.
+    rpc ReadChunks(ReadRequest) returns (Chunks);
+
+    // Read chunks from any given version.
+    rpc ReadCommittedChunks(ReadCommittedRequest) returns (Chunks);
+
+    // ---- For advanced clients that read/write directly to backing store.
+
+    // Get location of chunks, i.e., (version, chunk coord) tuples, for set of chunk coords at a given version.
+    rpc GetCommittedChunkRefs(ReadCommittedRequest) returns (ChunkRefs);
+
+    // Update the Janus server index for chunks that have been altered using direct writes to chunk storage.
     rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
 }
 
-// ---- Request message per rpc allows us to alter data requirements in backward compatible way.
+// ---- Request messages.
 
 message NewDatasetRequest {
     DatasetSpec spec = 1;
@@ -91,20 +117,17 @@ message ReadRequest {
     repeated ChunkCoord coords = 2;
 }
 
+message ReadCommittedRequest {
+    Version version = 1;
+    repeated ChunkCoord coords = 2;
+}
+
 message MarkIngestedRequest {
     Session session = 1;
-    ChunkCoords coords = 2;
+    repeated ChunkCoord coords = 2;
 }
 
-// ---- Response message per rpc allows us to alter data requirements in backward compatible way.
-
-message SessionResponse {
-    Session session = 1;
-}
-
-message ReadResponse {
-    Chunks chunks = 1;
-}
+// ---- Response messages, all currently empty but data can be added while maintaining backwards-compatibility.
 
 message NewDatasetResponse {}
 message CommitResponse {}
