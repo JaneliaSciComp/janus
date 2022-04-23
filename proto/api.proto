@@ -49,10 +49,10 @@ message ChunkRefs {
 
 // Note: If serialization/deserialization of large chunk data is too costly,
 //  we can bypass embedding in protobuf message and send directly afterwards.
-//  Can also test CapnProto since API is small and retooling not so costly
-//  after we determine our actual workflow requirements.
-//  This isn't a factor if the client writes/reads directly from the chunk
-//  storage using pure
+//  After we determine our actual workflow requirements, we can test CapnProto 
+//  since API is small and retooling not so costly. This isn't a factor 
+//  if the client writes/reads directly from the chunk storage using the
+//  advanced client rpcs: GetVersionChunkRefs() and MarkIngestedChunks().
 message Chunk {
     ChunkCoord coord = 1;
     bytes data = 2; // whole message must be less than 2GiB (protobuf limit)
