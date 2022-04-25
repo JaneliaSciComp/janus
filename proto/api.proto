@@ -11,8 +11,11 @@ enum DataFormat {
     NG_SHARDED = 3;
 }
 
+// Dataset path to location of chunk data with optional prefix to indicate
+// cloud storage provider.
+// Includes "s3://" for AWS S3, "gs://" for Google Cloud Storage.
 message Dataset {
-    string path = 1;
+    string path = 1; 
 }
 
 message DatasetSpec {
@@ -23,24 +26,18 @@ message DatasetSpec {
     string metadata = 5; // DataFormat-specific metadata
 }
 
-// A Version is a unique monotically increasing ID per Dataset.
-// Its git equivalent is either a working directory OR a committed version.
-message Version {
-    uint64 id = 1; 
-}
-
-// A Session represents an uncommitted version where chunks can be written.
+// Session represents an uncommitted version where chunks can be written.
 // Its git equivalent would be a working directory.
 message Session {
-    Version version = 1;
+    uint64 version = 1;
 }
 
-// A nD coordinate for a chunk of data.
+// ChunkCoord is a nD coordinate for a chunk of data.
 message ChunkCoord {
     repeated uint64 coord = 1;
 }
 
-// Chunk references give advanced clients location of last change for given chunks
+// ChunkRefs give advanced clients location of last change for given chunks
 //  via (version, chunk coord) tuple.
 message ChunkRefs {
     repeated uint64 versions = 1;
@@ -98,32 +95,32 @@ message NewDatasetRequest {
 message SessionRequest {
     string client = 1;   // user (e.g., email), program name, etc.
     Dataset dataset = 2;
-    Version parent = 3;  // version ID of the parent to desired session.
+    uint64 parent = 3;  // version ID of the parent to desired session.
     optional bool base = 4; // if true, previous data is discarded and we start with fresh nD volume.
 }
 
 message CommitRequest {
-    Session session = 1;
+    uint64 session = 1;
     string message = 2;
 }
 
 message WriteRequest {
-    Session session = 1;
+    uint64 session = 1;
     Chunks chunks = 2;
 }
 
 message ReadRequest {
-    Session session = 1;
+    uint64 session = 1;
     repeated ChunkCoord coords = 2;
 }
 
 message ReadVersionRequest {
-    Version version = 1;
+    uint64 version = 1;
     repeated ChunkCoord coords = 2;
 }
 
 message MarkIngestedRequest {
-    Session session = 1;
+    uint64 session = 1;
     repeated ChunkCoord coords = 2;
 }
 
