@@ -11,19 +11,22 @@ enum DataFormat {
     NG_SHARDED = 3;
 }
 
-// Dataset path to location of chunk data with optional prefix to indicate
-// cloud storage provider.
-// Includes "s3://" for AWS S3, "gs://" for Google Cloud Storage.
-message Dataset {
-    string path = 1; 
-}
-
 message DatasetSpec {
-    Dataset dataset = 1;
+    // Dataset path to location of chunk data with optional prefix to indicate
+    // cloud storage provider. Includes "s3://" for AWS S3, "gs://" for Google Cloud Storage.
+    string path = 1;
+
+    // How we want to layout the chunk data on backing storage
     DataFormat layout = 2;
-    uint32 numDims = 3; // number of dimensions
-    repeated uint32 dimBits = 4; // number of bits to represent each dimension
-    string metadata = 5; // DataFormat-specific metadata
+
+    // Number of dimensions
+    uint32 numDims = 3;
+
+    // Number of bits required for each dimension
+    repeated uint32 dimBits = 4;
+
+    // DataFormat-specific metadata that should be stored in creating datasets on backing storage
+    string metadata = 5;
 }
 
 // ChunkCoord is a nD coordinate for a chunk of data.
@@ -54,27 +57,27 @@ message Chunks {
 }
 
 service ChunkIndexer {
+    // Initializes space for tracking chunks of a new dataset
     rpc NewDataset(NewDatasetRequest) returns (NewDatasetResponse);
 
-    // Create new session for user if one not present or previous one committed, or returns old uncommitted session.
-    rpc OpenSession(SessionRequest) returns (SessionResponse); 
+    // Returns an uncommitted version where chunks can be written.
+    // Its git equivalent would be a working directory.  If an 
+    // uncommitted version for branch already exists, it returns that.
+    rpc OpenWritableVersion(OpenRequest) returns (OpenResponse); 
 
-    // Commits and closes the session.
-    rpc CommitSession(CommitRequest) returns (CommitResponse); 
+    // Commits a writable version.
+    rpc CommitVersion(CommitRequest) returns (CommitResponse); 
 
-    // Write chunks in a session.
+    // Write chunks to a writable version.
     rpc WriteChunks(WriteRequest) returns (WriteResponse);
 
-    // Read chunks in a session.
+    // Read chunks from a version.
     rpc ReadChunks(ReadRequest) returns (Chunks);
-
-    // Read chunks from any given version.
-    rpc ReadVersionChunks(ReadVersionRequest) returns (Chunks);
 
     // ---- For advanced clients that read/write directly to backing storage.
 
-    // Get location of chunks, i.e., (version, chunk coord) tuples, for set of chunk coords at a given version.
-    rpc GetVersionChunkRefs(ReadVersionRequest) returns (ChunkRefs);
+    // Get location of chunks, (version, chunk coord) tuples, for set of chunk coords at a given version.
+    rpc GetVersionChunkRefs(ReadRequest) returns (ChunkRefs);
 
     // Update the Janus server index for chunks that have been altered using direct writes to chunk storage.
     rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
@@ -86,43 +89,36 @@ message NewDatasetRequest {
     DatasetSpec spec = 1;
 }
 
-message SessionRequest {
-    string client = 1;   // user (e.g., email), program name, etc.
-    Dataset dataset = 2;
-    uint64 parent = 3;  // version ID of the parent to desired session.
-    optional bool base = 4; // if true, previous data is discarded and we start with fresh nD volume.
+message OpenRequest {
+    string datasetPath = 1;
+    
+    string branch = 2;  // "main", task + user, task + program, etc. (git-equivalent branch)
+    optional bool base = 3; // if true, previous index is discarded and we assume there's a fresh nD volume.
 }
 
 message CommitRequest {
-    uint64 session = 1;
+    uint64 version = 1;
     string message = 2;
 }
 
 message WriteRequest {
-    uint64 session = 1;
+    uint64 version = 1;
     Chunks chunks = 2;
 }
 
 message ReadRequest {
-    uint64 session = 1;
-    repeated ChunkCoord coords = 2;
-}
-
-message ReadVersionRequest {
     uint64 version = 1;
     repeated ChunkCoord coords = 2;
 }
 
 message MarkIngestedRequest {
-    uint64 session = 1;
+    uint64 version = 1;
     repeated ChunkCoord coords = 2;
 }
 
 // ---- Response messages, all currently empty but data can be added while maintaining backwards-compatibility.
 
-// A session represents an uncommitted version where chunks can be written.
-// Its git equivalent would be a working directory.
-message SessionResponse {
+message OpenResponse {
     uint64 version = 1;
 }
 
