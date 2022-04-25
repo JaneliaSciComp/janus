@@ -26,12 +26,6 @@ message DatasetSpec {
     string metadata = 5; // DataFormat-specific metadata
 }
 
-// Session represents an uncommitted version where chunks can be written.
-// Its git equivalent would be a working directory.
-message Session {
-    uint64 version = 1;
-}
-
 // ChunkCoord is a nD coordinate for a chunk of data.
 message ChunkCoord {
     repeated uint64 coord = 1;
@@ -63,7 +57,7 @@ service ChunkIndexer {
     rpc NewDataset(NewDatasetRequest) returns (NewDatasetResponse);
 
     // Create new session for user if one not present or previous one committed, or returns old uncommitted session.
-    rpc OpenSession(SessionRequest) returns (Session); 
+    rpc OpenSession(SessionRequest) returns (SessionResponse); 
 
     // Commits and closes the session.
     rpc CommitSession(CommitRequest) returns (CommitResponse); 
@@ -77,7 +71,7 @@ service ChunkIndexer {
     // Read chunks from any given version.
     rpc ReadVersionChunks(ReadVersionRequest) returns (Chunks);
 
-    // ---- For advanced clients that read/write directly to backing store.
+    // ---- For advanced clients that read/write directly to backing storage.
 
     // Get location of chunks, i.e., (version, chunk coord) tuples, for set of chunk coords at a given version.
     rpc GetVersionChunkRefs(ReadVersionRequest) returns (ChunkRefs);
@@ -125,6 +119,12 @@ message MarkIngestedRequest {
 }
 
 // ---- Response messages, all currently empty but data can be added while maintaining backwards-compatibility.
+
+// A session represents an uncommitted version where chunks can be written.
+// Its git equivalent would be a working directory.
+message SessionResponse {
+    uint64 version = 1;
+}
 
 message NewDatasetResponse {}
 message CommitResponse {}
