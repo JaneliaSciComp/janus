@@ -92,8 +92,9 @@ message NewDatasetRequest {
 message OpenRequest {
     string datasetPath = 1;
     
-    string branch = 2;  // "main", task + user, task + program, etc. (git-equivalent branch)
-    optional bool base = 3; // if true, previous index is discarded and we assume there's a fresh nD volume.
+    string branch = 2;  // determined by client: "main", task + user, task + program, etc. (git-equivalent branch)
+    optional uint64 parent = 3; // parent version; required if branch doesn't exist.
+    optional bool base = 4; // if true, previous index is discarded and we assume there's a fresh nD volume.
 }
 
 message CommitRequest {
