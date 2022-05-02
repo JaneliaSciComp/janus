@@ -71,11 +71,11 @@ service ChunkIndexer {
     // uncommitted version for branch already exists, it returns that.
     rpc OpenWritableVersion(OpenRequest) returns (OpenResponse); 
 
-    // Commits a writable version.
-    rpc CommitVersion(CommitRequest) returns (CommitResponse); 
-
     // Write chunks to a writable version.
     rpc WriteChunks(WriteRequest) returns (WriteResponse);
+
+    // Commits a writable version.
+    rpc CommitVersion(CommitRequest) returns (CommitResponse); 
 
     // ---- For advanced clients that read/write directly to backing storage.
 
@@ -112,17 +112,17 @@ message OpenResponse {
     uint64 version = 1;
 }
 
-message CommitRequest {
-    uint64 version = 1;
-    string message = 2;
-}
-message CommitResponse {}
-
 message WriteRequest {
     uint64 version = 1;
     Chunks chunks = 2;
 }
 message WriteResponse {}
+
+message CommitRequest {
+    uint64 version = 1;
+    string message = 2;
+}
+message CommitResponse {}
 
 message MarkIngestedRequest {
     uint64 version = 1;
