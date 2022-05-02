@@ -12,21 +12,24 @@ enum DataFormat {
 }
 
 message DatasetSpec {
+    // Alias is a short name for the dataset that can be used in URLs and file names.
+    string alias = 1;
+
     // Dataset path to location of chunk data with optional prefix to indicate
     // cloud storage provider. Includes "s3://" for AWS S3, "gs://" for Google Cloud Storage.
-    string path = 1;
+    string path = 2;
 
     // How we want to layout the chunk data on backing storage
-    DataFormat layout = 2;
+    DataFormat layout = 3;
 
     // Number of dimensions
-    uint32 numDims = 3;
+    uint32 numDims = 4;
 
     // Number of bits required for each dimension
-    repeated uint32 dimBits = 4;
+    repeated uint32 dimBits = 5;
 
     // DataFormat-specific metadata that should be stored in creating datasets on backing storage
-    string metadata = 5;
+    string metadata = 6;
 }
 
 // ChunkCoord is a nD coordinate for a chunk of data.
@@ -60,6 +63,9 @@ service ChunkIndexer {
     // Initializes space for tracking chunks of a new dataset
     rpc NewDataset(NewDatasetRequest) returns (NewDatasetResponse);
 
+    // Read chunks from a version or HEAD of branch
+    rpc ReadChunks(ReadRequest) returns (Chunks);
+
     // Returns an uncommitted version where chunks can be written.
     // Its git equivalent would be a working directory.  If an 
     // uncommitted version for branch already exists, it returns that.
@@ -71,9 +77,6 @@ service ChunkIndexer {
     // Write chunks to a writable version.
     rpc WriteChunks(WriteRequest) returns (WriteResponse);
 
-    // Read chunks from a version.
-    rpc ReadChunks(ReadRequest) returns (Chunks);
-
     // ---- For advanced clients that read/write directly to backing storage.
 
     // Get location of chunks, (version, chunk coord) tuples, for set of chunk coords at a given version.
@@ -83,10 +86,19 @@ service ChunkIndexer {
     rpc MarkIngestedChunks(MarkIngestedRequest) returns (MarkIngestedResponse);
 }
 
-// ---- Request messages.
+// ---- Request and response messages.  Separate messages allow data to be added while maintaining backwards-compatibility.
 
 message NewDatasetRequest {
     DatasetSpec spec = 1;
+}
+message NewDatasetResponse {}
+
+message ReadRequest {
+    oneof versionSpec {
+        uint64 version = 1;
+        string branch = 2;  // use HEAD of branch
+    }
+    repeated ChunkCoord coords = 3;
 }
 
 message OpenRequest {
@@ -96,34 +108,25 @@ message OpenRequest {
     optional uint64 parent = 3; // parent version; required if branch doesn't exist.
     optional bool base = 4; // if true, previous index is discarded and we assume there's a fresh nD volume.
 }
+message OpenResponse {
+    uint64 version = 1;
+}
 
 message CommitRequest {
     uint64 version = 1;
     string message = 2;
 }
+message CommitResponse {}
 
 message WriteRequest {
     uint64 version = 1;
     Chunks chunks = 2;
 }
-
-message ReadRequest {
-    uint64 version = 1;
-    repeated ChunkCoord coords = 2;
-}
+message WriteResponse {}
 
 message MarkIngestedRequest {
     uint64 version = 1;
     repeated ChunkCoord coords = 2;
 }
-
-// ---- Response messages, all currently empty but data can be added while maintaining backwards-compatibility.
-
-message OpenResponse {
-    uint64 version = 1;
-}
-
-message NewDatasetResponse {}
-message CommitResponse {}
-message WriteResponse {}
 message MarkIngestedResponse {}
+
